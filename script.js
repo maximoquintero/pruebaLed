@@ -1,3 +1,21 @@
+$(document).ready(function () {
+  var ctx1 = document.getElementById("sensorUltrasonico").getContext("2d");
+  var chart1 = new Chart(ctx1, {
+    type: "line", // Tipo de gráfica
+    data: {
+      labels: [], // Las etiquetas de tiempo
+      datasets: [
+        {
+          label: "Sensor Ultrasonico",
+          backgroundColor: "rgb(51, 141, 255)",
+          borderColor: "rgb(93, 164, 255)",
+          data: [], // Los datos del sensor
+        },
+      ],
+    },
+    options: {},
+  })})
+
 websocket.onmessage = (event) => {
   const [ledState, distanciaStr] = event.data.split(" ");
   const toggleBtn = document.getElementById("toggleBtn");
