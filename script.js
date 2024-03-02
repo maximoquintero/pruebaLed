@@ -1,94 +1,94 @@
-$(document).ready(function () {
-  var ctx1 = document.getElementById("sensorUltrasonico").getContext("2d");
-  var chart1 = new Chart(ctx1, {
-    type: "line", // Tipo de gráfica
-    data: {
-      labels: [], // Las etiquetas de tiempo
-      datasets: [
-        {
-          label: "Sensor Ultrasonico",
-          backgroundColor: "rgb(51, 141, 255)",
-          borderColor: "rgb(93, 164, 255)",
-          data: [], // Los datos del sensor
-        },
-      ],
-    },
-    options: {},
-  })})
+const websocket = new WebSocket("ws://localhost:8765");
+websocket.onopen = () => console.log("Conectado al servidor WebSocket");
 
-websocket.onmessage = (event) => {
-  const [ledState, distanciaStr] = event.data.split(" ");
-  const toggleBtn = document.getElementById("toggleBtn");
-
-  if (ledState === "1") {
-    toggleBtn.checked = true;
-    console.log("Estado inicial del LED recibido:", ledState);
-
-    // Iniciar actualizaciones periódicas mientras ledState sea 1
-    updatePeriodically();
-  } else {
-    toggleBtn.checked = false;
-    // Detener las actualizaciones periódicas si ledState es 0
-    clearTimeout(updateInterval);
-  }
-};
-
-let updateInterval;
-
-function updatePeriodically() {
-  updateInterval = setTimeout(() => {
-    // Obtener la última distancia
-    const distancia = parseInt(distanciaStr);
-    let mensaje;
-    if (distancia <= 10) {
-      mensaje = "V";
-    } else if (distancia <= 30) {
-      mensaje = "A";
+const id = 1;
+axios
+  .get(`http://localhost:8082/led/${id}`)
+  .then(function (response) {
+    const estado_inicial = response.data[0].led_status;
+    console.log(estado_inicial);
+    websocket.send(estado_inicial);
+    const toggleBtn = document.getElementById("toggleBtn");
+    if (estado_inicial == 0) {
+      toggleBtn.checked = false;
     } else {
-      mensaje = "R";
+      toggleBtn.checked = true;
     }
-
-    // Agregar los datos al principio de dataArray
-    dataArray.unshift({ mensaje: mensaje, dato_sensor: distancia });
-
-    // Actualizar la gráfica y los LED
-    updateChartAndLEDs();
-
-    // Volver a llamar a la función para continuar las actualizaciones periódicas
-    updatePeriodically();
-  }, 1000); // Actualizar cada segundo (puedes ajustar el intervalo según tus necesidades)
-}
-
-function updateChartAndLEDs() {
-  let labels = [];
-  let sensorData = [];
-
-  dataArray.forEach(function (obj) {
-    labels.push(obj.mensaje);
-    sensorData.push(obj.dato_sensor);
+  })
+  .catch(function (error) {
+    console.error("Error:", error);
   });
+
+var ctx1 = document.getElementById("sensorUltrasonico").getContext("2d");
+var chart1 = new Chart(ctx1, {
+  type: "line",
+  data: {
+    labels: [],
+    datasets: [
+      {
+        label: "Sensor Ultrasonico",
+        backgroundColor: "rgb(51, 141, 255)",
+        borderColor: "rgb(93, 164, 255)",
+        data: [],
+      },
+    ],
+  },
+  options: {},
+});
+
+let labels = [];
+let sensorData = [];
+
+function actualizarGrafica(distancia, mensaje) {
+  labels.push(distancia);
+  sensorData.push(mensaje);
 
   chart1.data.labels = labels;
   chart1.data.datasets[0].data = sensorData;
   chart1.update();
 
   // Cambiar los LED basados en el último color
-  const lastColor = dataArray[0].mensaje;
   const led1 = document.getElementById("led1");
   const led2 = document.getElementById("led2");
   const led3 = document.getElementById("led3");
 
-  if (lastColor === "R") {
+  if (mensaje === "Rojo") {
     led1.src = "img/VERDE-OFF.svg";
     led2.src = "img/AMARILLO-OFF.svg";
     led3.src = "img/ROJO-ON.svg";
-  } else if (lastColor === "A") {
+  } else if (mensaje === "Amarillo") {
     led1.src = "img/VERDE-OFF.svg";
     led2.src = "img/AMARILLO-ON.svg";
     led3.src = "img/ROJO-OFF.svg";
-  } else if (lastColor === "V") {
+  } else if (mensaje === "Verde") {
     led1.src = "img/VERDE-ON.svg";
     led2.src = "img/AMARILLO-OFF.svg";
     led3.src = "img/ROJO-OFF.svg";
   }
 }
+
+websocket.onmessage = (event) => {
+  const mensajes = JSON.parse(event.data);
+  console.log("Mensaje recibido del servidor:", mensajes); // Imprime el mensaje recibido del servidor
+  const distancia = mensajes.valor;
+  const mensaje = mensajes.mensaje;
+  console.log("Datos de distancia y mensaje:", distancia, mensaje); // Imprime los datos de distancia y mensaje
+  actualizarGrafica(distancia, mensaje);
+};
+
+$("#toggleBtn").change(function () {
+  const toggleBtn = document.getElementById("toggleBtn");
+  const command = toggleBtn.checked ? "1" : "0";
+  websocket.send(command);
+  console.log("Comando enviado al servidor:", command);
+  axios
+    .put(`http://localhost:8082/led/${id}`,{
+      estado: command
+    })
+    .then(function (response) {
+      console.log(response)
+    })
+    .catch(function (error) {
+      console.error("Error:", error);
+    });
+});
