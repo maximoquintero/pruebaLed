@@ -40,8 +40,8 @@ let labels = [];
 let sensorData = [];
 
 function actualizarGrafica(distancia, mensaje) {
-  labels.push(distancia);
-  sensorData.push(mensaje);
+  labels.push(mensaje);
+  sensorData.push(distancia);
 
   chart1.data.labels = labels;
   chart1.data.datasets[0].data = sensorData;
